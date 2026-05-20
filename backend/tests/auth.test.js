@@ -135,7 +135,7 @@ describe('Authentication Endpoints', () => {
 
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
-      expect(response.body.code).toBe('UNAUTHORIZED');
+      expect(response.body.code).toBe('AUTHENTICATION_ERROR');
     });
 
     it('should fail with invalid token', async () => {
