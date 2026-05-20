@@ -49,10 +49,9 @@ jobs:
 
       - name: Run database migrations
         working-directory: backend
-        run: npx prisma migrate deploy
+        run: npx prisma migrate dev --name ci --skip-seed
         env:
           DATABASE_URL: postgresql://postgres:lifeos2024@localhost:5432/lifeos_db_test
-
       - name: Run tests with coverage
         working-directory: backend
         run: npm run test:coverage
