@@ -1,0 +1,22 @@
+# Dépendances
+node_modules/
+
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Prisma
+prisma/migrations/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Jest
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
