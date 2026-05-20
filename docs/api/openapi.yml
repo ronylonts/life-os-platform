@@ -1,0 +1,640 @@
+openapi: "3.0.3"
+
+info:
+  title: Life OS API
+  version: "1.0.0"
+  description: >
+    Contrat API officiel de la plateforme Life OS.
+    Ce document est la convention entre le frontend et le backend.
+    Toute modification doit etre discutee et validee par les deux developpeurs.
+
+servers:
+  - url: http://localhost:5000/api
+    description: Serveur de developpement local
+  - url: https://life-os-api.onrender.com/api
+    description: Serveur de production
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          format: uuid
+
+    Goal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        targetDate:
+          type: string
+          format: date
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        userId:
+          type: string
+          format: uuid
+
+    MoodEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+        note:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          format: uuid
+
+    FocusSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        durationMinutes:
+          type: integer
+        taskId:
+          type: string
+          format: uuid
+        completedAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          format: uuid
+
+    AiSuggestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [task, schedule, mood, goal]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+
+paths:
+
+  /auth/register:
+    post:
+      tags: [Authentification]
+      summary: Creer un compte utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@lifeos.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "motdepasse123"
+                name:
+                  type: string
+                  example: "Rony"
+      responses:
+        "201":
+          description: Compte cree avec succes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "409":
+          description: Email deja utilise
+        "422":
+          description: Donnees invalides
+
+  /auth/login:
+    post:
+      tags: [Authentification]
+      summary: Connexion utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@lifeos.com"
+                password:
+                  type: string
+                  example: "motdepasse123"
+      responses:
+        "200":
+          description: Connexion reussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: Identifiants invalides
+
+  /auth/me:
+    get:
+      tags: [Authentification]
+      summary: Profil de l utilisateur connecte
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Token manquant ou invalide
+
+  /tasks:
+    get:
+      tags: [Taches]
+      summary: Lister toutes les taches
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [todo, in_progress, done]
+        - in: query
+          name: priority
+          schema:
+            type: string
+            enum: [low, medium, high]
+      responses:
+        "200":
+          description: Liste des taches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "401":
+          description: Non autorise
+
+    post:
+      tags: [Taches]
+      summary: Creer une tache
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                  default: medium
+                dueDate:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Tache creee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "422":
+          description: Donnees invalides
+
+  /tasks/{id}:
+    put:
+      tags: [Taches]
+      summary: Modifier une tache
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                status:
+                  type: string
+                  enum: [todo, in_progress, done]
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                dueDate:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Tache mise a jour
+        "404":
+          description: Tache introuvable
+
+    delete:
+      tags: [Taches]
+      summary: Supprimer une tache
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tache supprimee
+        "404":
+          description: Tache introuvable
+
+  /events:
+    get:
+      tags: [Agenda]
+      summary: Lister les evenements
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Liste des evenements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+    post:
+      tags: [Agenda]
+      summary: Creer un evenement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, startAt, endAt]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                startAt:
+                  type: string
+                  format: date-time
+                endAt:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Evenement cree
+
+  /events/{id}:
+    put:
+      tags: [Agenda]
+      summary: Modifier un evenement
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Evenement mis a jour
+    delete:
+      tags: [Agenda]
+      summary: Supprimer un evenement
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Evenement supprime
+
+  /goals:
+    get:
+      tags: [Objectifs]
+      summary: Lister les objectifs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des objectifs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+
+    post:
+      tags: [Objectifs]
+      summary: Creer un objectif
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                targetDate:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Objectif cree
+
+  /goals/{id}/progress:
+    patch:
+      tags: [Objectifs]
+      summary: Mettre a jour la progression
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [progress]
+              properties:
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+      responses:
+        "200":
+          description: Progression mise a jour
+
+  /mood:
+    get:
+      tags: [Sante mentale]
+      summary: Historique des entrees d humeur
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des entrees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoodEntry"
+
+    post:
+      tags: [Sante mentale]
+      summary: Enregistrer une entree d humeur
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score]
+              properties:
+                score:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  example: 7
+                note:
+                  type: string
+                  example: "Bonne journee"
+      responses:
+        "201":
+          description: Entree enregistree
+
+  /focus:
+    get:
+      tags: [Productivite]
+      summary: Lister les sessions focus
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FocusSession"
+
+    post:
+      tags: [Productivite]
+      summary: Enregistrer une session focus
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [durationMinutes]
+              properties:
+                durationMinutes:
+                  type: integer
+                  example: 25
+                taskId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Session enregistree
+
+  /ai/suggestions:
+    get:
+      tags: [IA]
+      summary: Suggestions IA du jour
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiSuggestion"
+
+  /ai/weekly-report:
+    get:
+      tags: [IA]
+      summary: Rapport hebdomadaire IA
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Rapport genere
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report:
+                    type: string
+                  generatedAt:
+                    type: string
+                    format: date-time
