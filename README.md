@@ -26,14 +26,37 @@ Application web fullstack d'optimisation de vie personnelle pilotée par IA.
 
 ## Liens de déploiement
 
+- Frontend : Vercel (Root Directory : `frontend`)
 - API Backend : https://life-os-platform.onrender.com
 - Health Check : https://life-os-platform.onrender.com/api/health
+
+## Structure du projet
+
+```
+life-os-platform/
+├── frontend/          # Next.js (Vercel)
+├── backend/           # Node.js + Express + Prisma
+├── docs/              # Documentation & OpenAPI
+├── docker-compose.yml
+└── README.md
+```
 
 ## Installation locale
 
 ### Prérequis
 - Node.js 20+
 - Docker Desktop
+
+### Lancer le frontend en développement
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Voir [frontend/README.md](frontend/README.md) pour le détail.
 
 ### Lancer le projet avec Docker
 
