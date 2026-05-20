@@ -4,6 +4,14 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 const dotenv = require('dotenv')
 
+const authRoutes = require('./routes/auth')
+const tasksRoutes = require('./routes/tasks')
+const eventsRoutes = require('./routes/events')
+const goalsRoutes = require('./routes/goals')
+const moodRoutes = require('./routes/mood')
+const focusRoutes = require('./routes/focus')
+const aiRoutes = require('./routes/ai')
+
 dotenv.config()
 
 const app = express()
@@ -25,6 +33,18 @@ app.use(express.json())
 
 // Morgan affiche chaque requête dans le terminal
 app.use(morgan('dev'))
+
+// -----------------------------------
+// ROUTES
+// -----------------------------------
+
+app.use('/api/auth', authRoutes)
+app.use('/api/tasks', tasksRoutes)
+app.use('/api/events', eventsRoutes)
+app.use('/api/goals', goalsRoutes)
+app.use('/api/mood', moodRoutes)
+app.use('/api/focus', focusRoutes)
+app.use('/api/ai', aiRoutes)
 
 // -----------------------------------
 // ROUTE DE TEST

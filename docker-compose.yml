@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: lifeos_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: lifeos2024
+      POSTGRES_DB: lifeos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Interface graphique pour voir la base de données
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: lifeos_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lifeos.com
+      PGADMIN_DEFAULT_PASSWORD: lifeos2024
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
