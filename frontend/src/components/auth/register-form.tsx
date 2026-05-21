@@ -2,13 +2,16 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getAuthErrorMessage, useAuth } from "@/contexts/auth-context";
+import { getToken } from "@/lib/auth/storage";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function RegisterForm() {
   const { register } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +25,9 @@ export function RegisterForm() {
 
     try {
       await register({ name, email, password });
+      if (getToken()) {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

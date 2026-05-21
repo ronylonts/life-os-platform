@@ -48,9 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (payload: LoginPayload) => {
       const response = await authApi.login(payload);
+      if (!response?.token) {
+        throw new ApiClientError("Réponse de connexion invalide", 500);
+      }
       setToken(response.token);
       setUser(response.user);
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
     [router],
   );
@@ -58,9 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (payload: RegisterPayload) => {
       const response = await authApi.register(payload);
+      if (!response?.token) {
+        throw new ApiClientError("Réponse d'inscription invalide", 500);
+      }
       setToken(response.token);
       setUser(response.user);
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
     [router],
   );

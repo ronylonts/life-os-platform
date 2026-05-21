@@ -20,6 +20,27 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   auth?: boolean;
 }
 
+/** Enveloppe standard du backend Express : { success, data } */
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  code?: string;
+}
+
+function unwrapResponse<T>(json: unknown): T {
+  if (
+    json &&
+    typeof json === "object" &&
+    "success" in json &&
+    "data" in json &&
+    (json as ApiEnvelope<T>).success === true
+  ) {
+    return (json as ApiEnvelope<T>).data;
+  }
+  return json as T;
+}
+
 async function parseError(response: Response): Promise<ApiClientError> {
   try {
     const data = (await response.json()) as ApiError;
@@ -65,7 +86,8 @@ export async function apiRequest<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const json: unknown = await response.json();
+  return unwrapResponse<T>(json);
 }
 
 export { API_URL };
