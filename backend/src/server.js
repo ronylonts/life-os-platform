@@ -24,7 +24,11 @@ app.use(helmet())
 
 // Cors autorise le frontend à communiquer avec ce backend
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://life-os-platform.vercel.app'
+  ],
   credentials: true
 }))
 
@@ -77,10 +81,22 @@ app.use((err, req, res, next) => {
 // DÉMARRAGE DU SERVEUR
 // -----------------------------------
 
-app.listen(PORT, () => {
+const { execSync } = require('child_process')
+
+app.listen(PORT, async () => {
   console.log(`✓ Serveur démarré sur le port ${PORT}`)
   console.log(`✓ Environnement : ${process.env.NODE_ENV}`)
   console.log(`✓ URL : http://localhost:${PORT}/api/health`)
+
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      console.log('✓ Lancement des migrations Prisma...')
+      execSync('npx prisma migrate deploy', { stdio: 'inherit' })
+      console.log('✓ Migrations appliquées avec succès')
+    } catch (error) {
+      console.error('✗ Erreur lors des migrations:', error.message)
+    }
+  }
 })
 
 module.exports = app
