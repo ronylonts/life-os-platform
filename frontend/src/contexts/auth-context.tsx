@@ -8,9 +8,17 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import { authApi } from "@/lib/api/services";
 import { ApiClientError } from "@/lib/api/client";
-import { clearToken, getToken, setToken } from "@/lib/auth/storage";
+import { getUserIdFromToken } from "@/lib/auth/jwt";
+import {
+  clearToken,
+  getStoredUser,
+  getToken,
+  setStoredUser,
+  setToken,
+} from "@/lib/auth/storage";
 import type { LoginPayload, RegisterPayload, User } from "@/types/api";
 
 interface AuthContextValue {
@@ -23,15 +31,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const AUTH_PATHS = ["/login", "/register"];
+
 function redirectToDashboard() {
-  if (typeof window !== "undefined") {
-    window.location.href = "/dashboard";
-  }
+  window.location.href = "/dashboard";
+}
+
+function buildUserFromToken(token: string, email?: string, name?: string): User | null {
+  const userId = getUserIdFromToken(token);
+  if (!userId) return null;
+
+  return {
+    id: userId,
+    email: email ?? "",
+    name: name ?? "Utilisateur",
+    createdAt: new Date().toISOString(),
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+
+  const isAuthPage = AUTH_PATHS.some((p) => pathname?.startsWith(p));
 
   const loadUser = useCallback(async () => {
     const token = getToken();
@@ -41,48 +64,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const cached = getStoredUser();
+    if (cached?.id) {
+      setUser(cached);
+    }
+
     try {
       const profile = await authApi.me();
       setUser(profile);
+      setStoredUser(profile);
     } catch {
-      clearToken();
-      setUser(null);
+      if (!cached?.id) {
+        const fallback = buildUserFromToken(token);
+        if (fallback) {
+          setUser(fallback);
+          setStoredUser(fallback);
+        } else {
+          clearToken();
+          setUser(null);
+        }
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
-
-  const completeAuth = useCallback(async (token: string, profile?: User) => {
-    setToken(token);
-
-    if (profile?.id) {
-      setUser(profile);
-      redirectToDashboard();
+    if (isAuthPage) {
+      setLoading(false);
       return;
     }
+    loadUser();
+  }, [isAuthPage, loadUser]);
 
-    try {
-      const me = await authApi.me();
-      setUser(me);
+  const completeAuth = useCallback(
+    async (token: string, profile?: User, email?: string, name?: string) => {
+      setToken(token);
+
+      let finalUser = profile?.id ? profile : null;
+
+      if (!finalUser) {
+        finalUser = buildUserFromToken(token, email, name);
+      }
+
+      if (!finalUser) {
+        try {
+          finalUser = await authApi.me();
+        } catch {
+          /* me optionnel si on a déjà le token */
+        }
+      }
+
+      if (!finalUser?.id) {
+        clearToken();
+        throw new ApiClientError(
+          "Connexion réussie mais profil utilisateur introuvable",
+          500,
+        );
+      }
+
+      setUser(finalUser);
+      setStoredUser(finalUser);
       redirectToDashboard();
-    } catch {
-      clearToken();
-      setUser(null);
-      throw new ApiClientError(
-        "Connexion réussie mais impossible de charger le profil",
-        500,
-      );
-    }
-  }, []);
+    },
+    [],
+  );
 
   const login = useCallback(
     async (payload: LoginPayload) => {
       const response = await authApi.login(payload);
-      await completeAuth(response.token, response.user);
+      await completeAuth(response.token, response.user, payload.email);
     },
     [completeAuth],
   );
@@ -90,7 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (payload: RegisterPayload) => {
       const response = await authApi.register(payload);
-      await completeAuth(response.token, response.user);
+      await completeAuth(
+        response.token,
+        response.user,
+        payload.email,
+        payload.name,
+      );
     },
     [completeAuth],
   );
@@ -98,9 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    window.location.href = "/login";
   }, []);
 
   const value = useMemo(

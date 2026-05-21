@@ -26,14 +26,27 @@ export function normalizeAuthResponse(raw: unknown): AuthResponse {
     (payload.accessToken as string) ||
     (payload.access_token as string);
 
-  const user = payload.user as User | undefined;
+  const rawUser = payload.user;
+  let user: User | undefined;
 
-  if (!token) {
+  if (rawUser && typeof rawUser === "object") {
+    const u = rawUser as Record<string, unknown>;
+    if (u.id) {
+      user = {
+        id: String(u.id),
+        email: String(u.email ?? ""),
+        name: String(u.name ?? "Utilisateur"),
+        createdAt: String(u.createdAt ?? new Date().toISOString()),
+      };
+    }
+  }
+
+  if (!token || typeof token !== "string") {
     throw new ApiClientError(
       "Réponse de connexion invalide : token manquant",
       500,
     );
   }
 
-  return { token, user: user as User };
+  return { token, user };
 }

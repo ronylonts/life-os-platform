@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { getToken } from "@/lib/auth/storage";
+import { getStoredUser, getToken } from "@/lib/auth/storage";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PageTransition } from "@/components/layout/page-transition";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -27,11 +27,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [tokenChecked, loading, user, router]);
 
-  if (!tokenChecked || loading || (hasToken && !user)) {
+  const cachedUser = getStoredUser();
+  const effectiveUser = user ?? cachedUser;
+
+  if (!tokenChecked || (loading && hasToken && !effectiveUser)) {
     return <LoadingSpinner label="Chargement de votre espace..." />;
   }
 
-  if (!user) {
+  if (!hasToken && !effectiveUser) {
     return null;
   }
 
