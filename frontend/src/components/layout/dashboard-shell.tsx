@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { getToken } from "@/lib/auth/storage";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PageTransition } from "@/components/layout/page-transition";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -10,14 +11,23 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [tokenChecked, setTokenChecked] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    setHasToken(Boolean(getToken()));
+    setTokenChecked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!tokenChecked || loading) return;
+
+    if (!getToken() && !user) {
       router.replace("/login");
     }
-  }, [loading, user, router]);
+  }, [tokenChecked, loading, user, router]);
 
-  if (loading) {
+  if (!tokenChecked || loading || (hasToken && !user)) {
     return <LoadingSpinner label="Chargement de votre espace..." />;
   }
 

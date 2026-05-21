@@ -1,7 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { authApi } from "@/lib/api/services";
 import { ApiClientError } from "@/lib/api/client";
 import { clearToken, getToken, setToken } from "@/lib/auth/storage";
@@ -17,10 +23,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function redirectToDashboard() {
+  if (typeof window !== "undefined") {
+    window.location.href = "/dashboard";
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   const loadUser = useCallback(async () => {
     const token = getToken();
@@ -45,37 +56,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [loadUser]);
 
+  const completeAuth = useCallback(async (token: string, profile?: User) => {
+    setToken(token);
+
+    if (profile?.id) {
+      setUser(profile);
+      redirectToDashboard();
+      return;
+    }
+
+    try {
+      const me = await authApi.me();
+      setUser(me);
+      redirectToDashboard();
+    } catch {
+      clearToken();
+      setUser(null);
+      throw new ApiClientError(
+        "Connexion réussie mais impossible de charger le profil",
+        500,
+      );
+    }
+  }, []);
+
   const login = useCallback(
     async (payload: LoginPayload) => {
       const response = await authApi.login(payload);
-      if (!response?.token) {
-        throw new ApiClientError("Réponse de connexion invalide", 500);
-      }
-      setToken(response.token);
-      setUser(response.user);
-      router.replace("/dashboard");
+      await completeAuth(response.token, response.user);
     },
-    [router],
+    [completeAuth],
   );
 
   const register = useCallback(
     async (payload: RegisterPayload) => {
       const response = await authApi.register(payload);
-      if (!response?.token) {
-        throw new ApiClientError("Réponse d'inscription invalide", 500);
-      }
-      setToken(response.token);
-      setUser(response.user);
-      router.replace("/dashboard");
+      await completeAuth(response.token, response.user);
     },
-    [router],
+    [completeAuth],
   );
 
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
-    router.push("/login");
-  }, [router]);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }, []);
 
   const value = useMemo(
     () => ({ user, loading, login, register, logout }),

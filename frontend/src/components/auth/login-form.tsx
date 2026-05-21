@@ -2,16 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { getAuthErrorMessage, useAuth } from "@/contexts/auth-context";
-import { getToken } from "@/lib/auth/storage";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const { login } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,12 +21,9 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
-      if (getToken()) {
-        router.push("/dashboard");
-      }
+      // redirectToDashboard() est appelé dans auth-context après succès
     } catch (err) {
       setError(getAuthErrorMessage(err));
-    } finally {
       setLoading(false);
     }
   }

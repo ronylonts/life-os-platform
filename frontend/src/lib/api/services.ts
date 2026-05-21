@@ -1,4 +1,5 @@
 import { apiRequest, ApiClientError } from "@/lib/api/client";
+import { normalizeAuthResponse } from "@/lib/api/auth-response";
 import { getToken } from "@/lib/auth/storage";
 import { isMockAuthEnabled, isMockToken, mockAuthApi } from "@/lib/api/mock-auth";
 import type {
@@ -47,16 +48,32 @@ function toApiError(error: unknown): never {
   throw error;
 }
 
+async function loginRequest(payload: LoginPayload): Promise<AuthResponse> {
+  const raw = await apiRequest<unknown>("/auth/login", {
+    method: "POST",
+    body: payload,
+  });
+  return normalizeAuthResponse(raw);
+}
+
+async function registerRequest(payload: RegisterPayload): Promise<AuthResponse> {
+  const raw = await apiRequest<unknown>("/auth/register", {
+    method: "POST",
+    body: payload,
+  });
+  return normalizeAuthResponse(raw);
+}
+
 export const authApi = {
   register: (payload: RegisterPayload) =>
     withMockAuthFallback(
-      () => apiRequest<AuthResponse>("/auth/register", { method: "POST", body: payload }),
+      () => registerRequest(payload),
       () => mockAuthApi.register(payload).catch(toApiError),
     ),
 
   login: (payload: LoginPayload) =>
     withMockAuthFallback(
-      () => apiRequest<AuthResponse>("/auth/login", { method: "POST", body: payload }),
+      () => loginRequest(payload),
       () => mockAuthApi.login(payload).catch(toApiError),
     ),
 
