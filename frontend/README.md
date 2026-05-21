@@ -18,7 +18,6 @@ Ouvrir [http://localhost:3000](http://localhost:3000).
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_API_URL` | URL de l'API (ex: `http://localhost:5000/api` ou Render en prod) |
-| `NEXT_PUBLIC_MOCK_AUTH` | `true` = auth locale sans backend, `false` = API réelle |
 
 ## Scripts
 
@@ -40,7 +39,6 @@ Variables de production :
 
 ```
 NEXT_PUBLIC_API_URL=https://life-os-platform.onrender.com/api
-NEXT_PUBLIC_MOCK_AUTH=false
 ```
 
 Le backend doit autoriser l'URL Vercel via `FRONTEND_URL` (CORS).
