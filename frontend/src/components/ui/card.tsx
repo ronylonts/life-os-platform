@@ -12,12 +12,12 @@ export function Card({ title, description, children, className = "", style }: Ca
   return (
     <section
       style={style}
-      className={`hover-lift rounded-xl border border-slate-700/50 bg-slate-900/75 p-5 shadow-lg shadow-black/20 backdrop-blur-sm ${className}`}
+      className={`theme-card hover-lift rounded-xl border p-5 shadow-lg backdrop-blur-sm ${className}`}
     >
       {(title || description) && (
         <header className="mb-4">
-          {title && <h2 className="text-lg font-semibold text-white">{title}</h2>}
-          {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
+          {title && <h2 className="theme-text text-lg font-semibold">{title}</h2>}
+          {description && <p className="theme-muted mt-1 text-sm">{description}</p>}
         </header>
       )}
       {children}

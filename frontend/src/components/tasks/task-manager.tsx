@@ -3,11 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiClientError } from "@/lib/api/client";
 import { tasksApi } from "@/lib/api/services";
+import { useToast } from "@/contexts/toast-context";
 import type { Task, TaskPriority, TaskStatus } from "@/types/api";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { TaskKanban } from "@/components/tasks/task-kanban";
+
+const STORAGE_VIEW_KEY = "life_os_tasks_view";
 
 const priorityLabels: Record<TaskPriority, string> = {
   low: "Basse",
@@ -22,14 +27,29 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 export function TaskManager() {
+  const { showToast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [filterPriority, setFilterPriority] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_VIEW_KEY) as ViewMode | null;
+    if (saved === "list" || saved === "kanban") {
+      setViewMode(saved);
+    }
+  }, []);
+
+  function handleViewChange(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem(STORAGE_VIEW_KEY, mode);
+  }
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -41,11 +61,14 @@ export function TaskManager() {
       });
       setTasks(data);
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Impossible de charger les tâches");
+      const msg =
+        err instanceof ApiClientError ? err.message : "Impossible de charger les tâches";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
-  }, [filterPriority, filterStatus]);
+  }, [filterPriority, filterStatus, showToast]);
 
   useEffect(() => {
     loadTasks();
@@ -60,29 +83,53 @@ export function TaskManager() {
     try {
       await tasksApi.create({ title, priority });
       setTitle("");
+      showToast("Tâche créée", "success");
       await loadTasks();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Impossible de créer la tâche");
+      const msg =
+        err instanceof ApiClientError ? err.message : "Impossible de créer la tâche";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleStatusChange(id: string, status: TaskStatus) {
+    const previous = tasks.find((t) => t.id === id);
+    if (previous?.status === status) return;
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status } : t)),
+    );
+
     try {
       await tasksApi.update(id, { status });
-      await loadTasks();
+      showToast("Statut mis à jour", "success");
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Impossible de mettre à jour la tâche");
+      await loadTasks();
+      const msg =
+        err instanceof ApiClientError ? err.message : "Impossible de mettre à jour";
+      showToast(msg, "error");
     }
   }
 
   async function handleDelete(id: string) {
     try {
       await tasksApi.delete(id);
+      showToast("Tâche supprimée", "success");
       await loadTasks();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Impossible de supprimer la tâche");
+      const msg =
+        err instanceof ApiClientError ? err.message : "Impossible de supprimer";
+      showToast(msg, "error");
+    }
+  }
+
+  function handleDropOnColumn(status: TaskStatus) {
+    if (draggingId) {
+      handleStatusChange(draggingId, status);
+      setDraggingId(null);
     }
   }
 
@@ -102,7 +149,7 @@ export function TaskManager() {
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as TaskPriority)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+            className="theme-input rounded-lg border px-3 py-2 text-sm"
           >
             <option value="low">Basse</option>
             <option value="medium">Moyenne</option>
@@ -114,53 +161,83 @@ export function TaskManager() {
         </form>
       </Card>
 
-      <Card title="Mes tâches">
-        <div className="mb-4 flex flex-wrap gap-3">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-          >
-            <option value="">Tous les statuts</option>
-            <option value="todo">À faire</option>
-            <option value="in_progress">En cours</option>
-            <option value="done">Terminée</option>
-          </select>
-          <select
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-          >
-            <option value="">Toutes les priorités</option>
-            <option value="low">Basse</option>
-            <option value="medium">Moyenne</option>
-            <option value="high">Haute</option>
-          </select>
+      <Card
+        title="Mes tâches"
+        description={
+          viewMode === "kanban"
+            ? "Glissez les cartes entre les colonnes"
+            : "Liste de toutes vos tâches"
+        }
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <ViewToggle
+            value={viewMode}
+            onChange={handleViewChange}
+            modes={[
+              { id: "kanban", label: "Kanban" },
+              { id: "list", label: "Liste" },
+            ]}
+          />
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="theme-input rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="todo">À faire</option>
+              <option value="in_progress">En cours</option>
+              <option value="done">Terminée</option>
+            </select>
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="theme-input rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="">Toutes les priorités</option>
+              <option value="low">Basse</option>
+              <option value="medium">Moyenne</option>
+              <option value="high">Haute</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-400">Chargement...</p>
+          <p className="text-sm theme-muted">Chargement...</p>
         ) : tasks.length === 0 ? (
-          <p className="text-sm text-slate-400">Aucune tâche pour le moment.</p>
+          <p className="text-sm theme-muted">Aucune tâche pour le moment.</p>
+        ) : viewMode === "kanban" ? (
+          <TaskKanban
+            tasks={tasks}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+            draggingId={draggingId}
+            onDragStart={setDraggingId}
+            onDragEnd={() => setDraggingId(null)}
+            onDropOnColumn={handleDropOnColumn}
+          />
         ) : (
           <ul className="space-y-3">
             {tasks.map((task, index) => (
               <li
                 key={task.id}
                 style={{ animationDelay: `${index * 0.06}s` }}
-                className="animate-list-item flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4 transition-all duration-300 hover:border-emerald-700/40 hover:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between"
+                className="theme-list-item animate-list-item flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-medium text-white">{task.title}</p>
-                  <p className="text-xs text-slate-500">
-                    Priorité : {priorityLabels[task.priority]} · Statut : {statusLabels[task.status]}
+                  <p className="font-medium theme-text">{task.title}</p>
+                  <p className="text-xs theme-muted">
+                    Priorité : {priorityLabels[task.priority]} · Statut :{" "}
+                    {statusLabels[task.status]}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <select
                     value={task.status}
-                    onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white"
+                    onChange={(e) =>
+                      handleStatusChange(task.id, e.target.value as TaskStatus)
+                    }
+                    className="theme-input rounded-lg border px-2 py-1 text-xs"
                   >
                     <option value="todo">À faire</option>
                     <option value="in_progress">En cours</option>
