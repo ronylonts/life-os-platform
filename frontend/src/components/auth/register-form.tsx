@@ -49,7 +49,7 @@ export function RegisterForm() {
         autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="user@lifeos.com"
+        placeholder="vous@exemple.com"
       />
 
       <Input

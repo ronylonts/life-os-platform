@@ -1,7 +1,5 @@
-import { apiRequest, ApiClientError } from "@/lib/api/client";
+import { apiRequest } from "@/lib/api/client";
 import { normalizeAuthResponse } from "@/lib/api/auth-response";
-import { getToken } from "@/lib/auth/storage";
-import { isMockAuthEnabled, isMockToken, mockAuthApi } from "@/lib/api/mock-auth";
 import type {
   AiSuggestion,
   AuthResponse,
@@ -22,32 +20,6 @@ import type {
   WeeklyReport,
 } from "@/types/api";
 
-async function withMockAuthFallback<T>(
-  apiCall: () => Promise<T>,
-  mockCall: () => Promise<T>,
-): Promise<T> {
-  if (isMockAuthEnabled) {
-    return mockCall();
-  }
-
-  try {
-    return await apiCall();
-  } catch (error) {
-    if (error instanceof TypeError || (error instanceof ApiClientError && error.status === 0)) {
-      return mockCall();
-    }
-    throw error;
-  }
-}
-
-function toApiError(error: unknown): never {
-  if (typeof error === "object" && error !== null && "message" in error && "status" in error) {
-    const e = error as { message: string; status: number; code?: string };
-    throw new ApiClientError(e.message, e.status, e.code);
-  }
-  throw error;
-}
-
 async function loginRequest(payload: LoginPayload): Promise<AuthResponse> {
   const raw = await apiRequest<unknown>("/auth/login", {
     method: "POST",
@@ -65,28 +37,11 @@ async function registerRequest(payload: RegisterPayload): Promise<AuthResponse> 
 }
 
 export const authApi = {
-  register: (payload: RegisterPayload) =>
-    withMockAuthFallback(
-      () => registerRequest(payload),
-      () => mockAuthApi.register(payload).catch(toApiError),
-    ),
+  register: (payload: RegisterPayload) => registerRequest(payload),
 
-  login: (payload: LoginPayload) =>
-    withMockAuthFallback(
-      () => loginRequest(payload),
-      () => mockAuthApi.login(payload).catch(toApiError),
-    ),
+  login: (payload: LoginPayload) => loginRequest(payload),
 
-  me: () => {
-    const token = getToken();
-    if (isMockToken(token)) {
-      return mockAuthApi.me(token!).catch(toApiError);
-    }
-    return withMockAuthFallback(
-      () => apiRequest<User>("/auth/me", { auth: true }),
-      () => mockAuthApi.me(token!).catch(toApiError),
-    );
-  },
+  me: () => apiRequest<User>("/auth/me", { auth: true }),
 };
 
 export const tasksApi = {
