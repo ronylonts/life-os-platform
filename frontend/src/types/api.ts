@@ -68,7 +68,7 @@ export interface ApiError {
 
 export interface AuthResponse {
   token: string;
-  user: User;
+  user?: User;
 }
 
 export interface WeeklyReport {

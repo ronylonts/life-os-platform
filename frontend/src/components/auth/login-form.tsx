@@ -16,12 +16,13 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
+
     setError("");
     setLoading(true);
 
     try {
       await login({ email, password });
-      // redirectToDashboard() est appelé dans auth-context après succès
     } catch (err) {
       setError(getAuthErrorMessage(err));
       setLoading(false);
