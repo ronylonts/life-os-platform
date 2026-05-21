@@ -24,7 +24,11 @@ app.use(helmet())
 
 // Cors autorise le frontend à communiquer avec ce backend
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://life-os-platform.vercel.app'
+  ],
   credentials: true
 }))
 
