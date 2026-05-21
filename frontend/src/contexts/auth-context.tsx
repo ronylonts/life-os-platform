@@ -34,7 +34,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_PATHS = ["/login", "/register"];
 
 function redirectToDashboard() {
-  window.location.href = "/dashboard";
+  window.location.replace("/dashboard");
 }
 
 function buildUserFromToken(token: string, email?: string, name?: string): User | null {
@@ -99,32 +99,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const completeAuth = useCallback(
     async (token: string, profile?: User, email?: string, name?: string) => {
-      setToken(token);
-
-      let finalUser = profile?.id ? profile : null;
-
-      if (!finalUser) {
-        finalUser = buildUserFromToken(token, email, name);
-      }
-
-      if (!finalUser) {
-        try {
-          finalUser = await authApi.me();
-        } catch {
-          /* me optionnel si on a déjà le token */
-        }
-      }
-
-      if (!finalUser?.id) {
-        clearToken();
+      const trimmed = token?.trim();
+      if (!trimmed) {
         throw new ApiClientError(
-          "Connexion réussie mais profil utilisateur introuvable",
+          "Réponse de connexion invalide : token manquant",
           500,
         );
       }
 
-      setUser(finalUser);
-      setStoredUser(finalUser);
+      setToken(trimmed);
+
+      let finalUser = profile?.id ? profile : null;
+
+      if (!finalUser) {
+        finalUser = buildUserFromToken(trimmed, email, name);
+      }
+
+      if (!finalUser?.id && email) {
+        const userId = getUserIdFromToken(trimmed);
+        finalUser = {
+          id: userId ?? email,
+          email,
+          name: name ?? "Utilisateur",
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      if (!finalUser?.id) {
+        try {
+          finalUser = await authApi.me();
+        } catch {
+          /* /me optionnel — on redirige quand même si le token est valide */
+        }
+      }
+
+      if (finalUser?.id) {
+        setUser(finalUser);
+        setStoredUser(finalUser);
+      }
+
+      // Toujours rediriger après un token reçu (login API = 200)
       redirectToDashboard();
     },
     [],

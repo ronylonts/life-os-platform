@@ -5,7 +5,12 @@ const USER_KEY = "life_os_user";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token?.startsWith("mock-jwt-")) {
+    clearToken();
+    return null;
+  }
+  return token;
 }
 
 export function setToken(token: string): void {

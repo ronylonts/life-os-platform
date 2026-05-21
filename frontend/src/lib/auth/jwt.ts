@@ -12,7 +12,3 @@ export function getUserIdFromToken(token: string): string | null {
     return null;
   }
 }
-
-export function isJwtFormat(token: string): boolean {
-  return token.split(".").length === 3 && !token.startsWith("mock-jwt-");
-}
