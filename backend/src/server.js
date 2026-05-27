@@ -27,7 +27,10 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://life-os-platform.vercel.app'
+    'https://life-os-platform.vercel.app',
+    'capacitor://localhost',
+    'https://localhost',
+    'http://localhost'
   ],
   credentials: true
 }))

@@ -1,0 +1,17 @@
+services:
+  android-builder:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../frontend:/workspace/frontend
+      - ../generated:/workspace/generated
+      - android-npm-cache:/root/.npm
+      - android-gradle-cache:/root/.gradle
+    environment:
+      - APP_NAME=${APP_NAME:-Life OS}
+      - APP_ID=${APP_ID:-com.lifeos.app}
+
+volumes:
+  android-npm-cache:
+  android-gradle-cache:
