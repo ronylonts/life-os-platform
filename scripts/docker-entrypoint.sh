@@ -25,6 +25,7 @@ cd /workspace/frontend
 # Suppression des anciens node_modules pour éviter les conflits de permissions
 rm -rf node_modules 2>/dev/null || true
 npm install --prefer-offline 2>/dev/null || npm install
+npm install fs-extra
 log_ok "Dépendances installées"
 
 # ──────────────────────────────────────────────────────────────────
@@ -33,9 +34,12 @@ log_ok "Dépendances installées"
 log_step "Build Next.js en mode export statique..."
 npm run build
 log_ok "Build Next.js terminé — dossier out/ généré"
+sync
 
-if [ ! -d "out" ]; then
-  log_err "Le dossier out/ n'existe pas. Vérifiez votre next.config.ts (output: 'export')"
+log_step "Vérification du dossier out/..."
+ls -la out/ 2>&1 | head -10
+if [ ! -f "out/index.html" ]; then
+  log_err "Le fichier out/index.html est manquant"
 fi
 
 # ──────────────────────────────────────────────────────────────────
