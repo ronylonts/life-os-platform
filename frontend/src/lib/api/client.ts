@@ -1,7 +1,14 @@
 import { getToken } from "@/lib/auth/storage";
 import type { ApiError } from "@/types/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
+function getApiUrl(): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+}
+
+const API_URL = getApiUrl();
 
 export class ApiClientError extends Error {
   status: number;
@@ -20,7 +27,6 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   auth?: boolean;
 }
 
-/** Enveloppe standard du backend Express : { success, data } */
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
