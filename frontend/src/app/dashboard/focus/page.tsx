@@ -60,7 +60,7 @@ export default function FocusPage() {
 
       <div className="space-y-6">
         <Card title="Enregistrer une session">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
             <Input
               label="Durée (minutes)"
               type="number"

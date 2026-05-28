@@ -59,7 +59,7 @@ export default function GoalsPage() {
 
       <div className="space-y-6">
         <Card title="Nouvel objectif">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}

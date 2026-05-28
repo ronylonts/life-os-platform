@@ -95,30 +95,31 @@ export function CalendarGrid({ events, onSelectDay }: CalendarGridProps) {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium theme-muted">
-        {WEEKDAYS.map((d) => (
-          <div key={d} className="py-2">
-            {d}
-          </div>
-        ))}
-      </div>
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[350px] grid-cols-7 gap-1 text-center text-xs font-medium theme-muted">
+          {WEEKDAYS.map((d) => (
+            <div key={d} className="py-2">
+              {d}
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((cell) => {
-          if (!cell.date) {
-            return <div key={cell.key} className="min-h-[72px]" />;
-          }
+        <div className="grid min-w-[350px] grid-cols-7 gap-1">
+          {cells.map((cell) => {
+            if (!cell.date) {
+              return <div key={cell.key} className="min-h-[56px] sm:min-h-[72px]" />;
+            }
 
-          const dayEvents = eventsForDay(cell.date);
+            const dayEvents = eventsForDay(cell.date);
 
-          return (
-            <button
-              key={cell.key}
-              type="button"
-              onClick={() => onSelectDay?.(cell.date!)}
-              className={`theme-calendar-day min-h-[72px] rounded-lg border p-1 text-left transition hover:border-emerald-600/50 ${
-                isToday(cell.date) ? "border-emerald-500 ring-1 ring-emerald-500/40" : ""
-              }`}
+            return (
+              <button
+                key={cell.key}
+                type="button"
+                onClick={() => onSelectDay?.(cell.date!)}
+                className={`theme-calendar-day min-h-[56px] rounded-lg border p-1 text-left transition hover:border-emerald-600/50 sm:min-h-[72px] ${
+                  isToday(cell.date) ? "border-emerald-500 ring-1 ring-emerald-500/40" : ""
+                }`}
             >
               <span
                 className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
@@ -144,6 +145,7 @@ export function CalendarGrid({ events, onSelectDay }: CalendarGridProps) {
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

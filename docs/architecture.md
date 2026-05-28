@@ -1,182 +1,167 @@
-markdown# Architecture — Life OS Platform
+# Architecture — Life OS Platform
 
-## Vue d ensemble
-┌─────────────────────────────────────────────────────────────┐
-│                        UTILISATEUR                          │
-└─────────────────────────┬───────────────────────────────────┘
-│ HTTPS
-▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (Next.js)                        │
-│                    Vercel — Port 3000                        │
-│                                                             │
-│  - Pages : Login, Dashboard, Tasks, Goals, Mood, Focus      │
-│  - State : Zustand                                          │
-│  - API Client : Axios + React Query                         │
-└─────────────────────────┬───────────────────────────────────┘
-│ REST API (JSON)
-│ Authorization: Bearer JWT
-▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BACKEND (Node.js + Express)               │
-│                    Render — Port 5000                        │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │   Routes    │  │ Middlewares │  │ Controllers │        │
-│  │  /api/auth  │  │     JWT     │  │    Auth     │        │
-│  │  /api/tasks │  │  Validator  │  │    Tasks    │        │
-│  │  /api/goals │  │   Helmet    │  │    Goals    │        │
-│  │  /api/mood  │  │    CORS     │  │    Mood     │        │
-│  │  /api/focus │  │   Morgan    │  │    Focus    │        │
-│  │  /api/ai    │  └─────────────┘  │    AI       │        │
-│  └─────────────┘                   └─────────────┘        │
-│                                                             │
-│  ┌─────────────────────────────────────────────────┐       │
-│  │                   Services                       │       │
-│  │  authService  tasksService  goalsService         │       │
-│  │  moodService  focusService  aiService            │       │
-│  └─────────────────────────┬───────────────────────┘       │
-└────────────────────────────┼────────────────────────────────┘
-│ Prisma ORM
-▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BASE DE DONNEES                           │
-│                    PostgreSQL 16                             │
-│                    Render PostgreSQL                         │
-│                                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
-│  │  users   │  │  tasks   │  │  events  │                 │
-│  └──────────┘  └──────────┘  └──────────┘                 │
-│  ┌──────────┐  ┌──────────────┐  ┌───────────────┐        │
-│  │  goals   │  │ mood_entries │  │ focus_sessions│        │
-│  └──────────┘  └──────────────┘  └───────────────┘        │
-└─────────────────────────────────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────┐
-│                    API EXTERNE                               │
-│                    OpenAI API                                │
-│                    GPT pour suggestions et rapports IA       │
-└─────────────────────────────────────────────────────────────┘
+## Vue d'ensemble
 
----
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        UTILISATEUR                                   │
+│          Navigateur Web (desktop)  ·  App Android (mobile)           │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │ HTTPS
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    FRONTEND (Next.js 15)                             │
+│                    Vercel / Capacitor Android                        │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │                    App Router (Next.js)                     │     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │     │
+│  │  │   Auth   │  │Dashboard │  │  Tasks   │  │Calendar  │  │     │
+│  │  │(auth)/   │  │dashboard/│  │tasks/    │  │calendar/ │  │     │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │     │
+│  │  │  Goals   │  │   Mood   │  │  Focus   │  │    AI    │  │     │
+│  │  │goals/    │  │mood/     │  │focus/     │  │ai/       │  │     │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                     │
+│  ┌─────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
+│  │  Contextes  │  │    Composants     │  │  Client API          │  │
+│  │  (React)    │  │  UI · Layout ·    │  │  apiRequest()        │  │
+│  │  Auth ·     │  │  Auth · Tasks ·   │  │  Services typés      │  │
+│  │  Theme ·    │  │  Mood · Calendar  │  │  Gestion d'erreurs   │  │
+│  │  Toast      │  │  AI · Focus       │  │  Token JWT           │  │
+│  └─────────────┘  └──────────────────┘  └──────────────────────┘  │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │  Tailwind CSS v4 · Thème dark/light · Animations CSS       │     │
+│  └───────────────────────────────────────────────────────────┘     │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │ REST API (JSON)
+                          │ Authorization: Bearer <JWT>
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BACKEND (Express.js 5)                            │
+│                    Render · Port 5000                                │
+│                                                                     │
+│  ┌─────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
+│  │   Routes    │  │   Middlewares     │  │    Controllers        │  │
+│  │  /api/auth  │  │  JWT (auth)       │  │  auth · tasks ·      │  │
+│  │  /api/tasks │  │  Validators       │  │  events · goals ·    │  │
+│  │  /api/events│  │  Helmet (sécu)    │  │  mood · focus · ai   │  │
+│  │  /api/goals │  │  CORS             │  │                       │  │
+│  │  /api/mood  │  │  Morgan (logs)    │  └──────────────────────┘  │
+│  │  /api/focus │  └──────────────────┘                             │
+│  │  /api/ai    │                                                   │
+│  └─────────────┘                                                   │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │                    Services (logique métier)                │     │
+│  │  authService · tasksService · eventsService · goalsService │     │
+│  │  moodService · focusService · aiService (règles-métier)    │     │
+│  └─────────────────────────┬─────────────────────────────────┘     │
+└────────────────────────────┼───────────────────────────────────────┘
+                             │ Prisma ORM
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BASE DE DONNÉES                                   │
+│                    PostgreSQL 16 (Render)                            │
+│                                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
+│  │  users   │  │  tasks   │  │  events  │  │  goals            │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘  │
+│  ┌──────────────┐  ┌───────────────┐  ┌──────────────────┐       │
+│  │ mood_entries │  │ focus_sessions│  │ ai_suggestions   │       │
+│  └──────────────┘  └───────────────┘  └──────────────────┘       │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-## Flux d une requête typique
+## Flux d'une requête typique
 
-Utilisateur clique sur "Créer une tâche" dans le frontend
-Frontend envoie POST /api/tasks avec le token JWT dans le header
-Backend reçoit la requête
-Middleware JWT vérifie le token et identifie l utilisateur
-Middleware Validator vérifie que le titre est présent
-Controller Tasks appelle le Service Tasks
-Service Tasks appelle Prisma pour insérer en base de données
-Prisma exécute le SQL dans PostgreSQL
-La tâche créée remonte jusqu au frontend
-Frontend affiche la nouvelle tâche dans la liste
+```
+1. Utilisateur clique sur "Créer une tâche"
+2. Frontend → POST /api/tasks (Authorization: Bearer <token>)
+3. Middleware JWT vérifie le token → req.user = { userId }
+4. Middleware Validator vérifie le titre
+5. Controller Tasks appelle TasksService
+6. TasksService appelle Prisma → INSERT dans PostgreSQL
+7. Réponse remonte au frontend
+8. Frontend met à jour l'affichage
+```
 
+## Flux d'authentification
 
----
+```
+INSCRIPTION :
+  RegisterForm → authApi.register(payload)
+  → POST /api/auth/register
+  → Backend : hash bcrypt + INSERT user + JWT
+  → Frontend : token → localStorage, user → sessionStorage
+  → Redirection /dashboard
 
-## Modèle de données
-users
-├── id          UUID (clé primaire)
-├── email       STRING (unique)
-├── password    STRING (hashé bcrypt)
-├── name        STRING
-├── createdAt   DATETIME
-└── updatedAt   DATETIME
-tasks
-├── id          UUID (clé primaire)
-├── title       STRING
-├── description STRING (optionnel)
-├── status      ENUM (todo, in_progress, done)
-├── priority    ENUM (low, medium, high)
-├── dueDate     DATETIME (optionnel)
-├── userId      UUID (clé étrangère → users)
-├── createdAt   DATETIME
-└── updatedAt   DATETIME
-events
-├── id          UUID (clé primaire)
-├── title       STRING
-├── description STRING (optionnel)
-├── startAt     DATETIME
-├── endAt       DATETIME
-├── userId      UUID (clé étrangère → users)
-├── createdAt   DATETIME
-└── updatedAt   DATETIME
-goals
-├── id          UUID (clé primaire)
-├── title       STRING
-├── description STRING (optionnel)
-├── targetDate  DATE (optionnel)
-├── progress    INTEGER (0-100)
-├── userId      UUID (clé étrangère → users)
-├── createdAt   DATETIME
-└── updatedAt   DATETIME
-mood_entries
-├── id          UUID (clé primaire)
-├── score       INTEGER (1-10)
-├── note        STRING (optionnel)
-├── recordedAt  DATETIME
-└── userId      UUID (clé étrangère → users)
-focus_sessions
-├── id              UUID (clé primaire)
-├── durationMinutes INTEGER
-├── completedAt     DATETIME
-├── userId          UUID (clé étrangère → users)
-└── taskId          UUID (clé étrangère → tasks, optionnel)
+CONNEXION :
+  LoginForm → authApi.login(payload)
+  → POST /api/auth/login
+  → Backend : vérifie bcrypt + JWT
+  → Frontend : token → localStorage, user → sessionStorage
+  → Redirection /dashboard
 
----
+PERSISTANCE :
+  AuthProvider mount → getToken() depuis localStorage
+  → GET /api/auth/me (validation token)
+  → Succès : user mis à jour
+  → Échec : fallback sessionStorage → JWT decode → null
+```
 
-## Stack technique complète
+## Build APK Android
+
+```
+Hôte                              Docker / CI
+─────                             ───────────
+next build (export statique)
+  → frontend/out/
+                                    npm install (si out/ absent)
+                                    next build (si out/ absent)
+                                    npx cap add android
+                                    npx cap sync android
+                                    gradlew assembleDebug
+                                    → app-debug.apk
+```
+
+## Stack technique
 
 | Couche | Technologie | Version | Rôle |
-|--------|-------------|---------|------|
-| Frontend | Next.js | 14 | Interface utilisateur |
-| Backend | Node.js | 20 | Serveur API |
-| Framework | Express.js | 5 | Routing HTTP |
-| ORM | Prisma | 5 | Accès base de données |
-| Base de données | PostgreSQL | 16 | Stockage des données |
-| Authentification | JWT | - | Sécurisation des routes |
-| Chiffrement | bcryptjs | - | Hash des mots de passe |
-| Validation | express-validator | - | Validation des entrées |
-| Tests | Jest + Supertest | - | Tests automatisés |
-| Conteneurisation | Docker | - | Isolation des services |
-| CI/CD | GitHub Actions | - | Pipeline automatisé |
-| Déploiement Backend | Render | - | Hébergement API |
-| Déploiement Frontend | Vercel | - | Hébergement interface |
-
----
+|---|---|---|---|
+| Frontend | Next.js | 15 | Framework React (App Router) |
+| Frontend mobile | Capacitor | 8 | Wrapper Android natif |
+| UI | React | 19 | Bibliothèque d'interface |
+| Style | Tailwind CSS | 4 | CSS utilitaire |
+| Backend | Express.js | 5 | Serveur HTTP |
+| Base de données | PostgreSQL | 16 | Stockage |
+| ORM | Prisma | 5 | Accès BDD |
+| Auth | JWT + bcrypt | — | Sessions sécurisées |
+| Validation | express-validator | 7 | Validation entrées |
+| Tests backend | Jest + Supertest | 30 / 7 | Tests automatisés |
+| Conteneurisation | Docker | — | Build + déploiement |
+| CI/CD | GitHub Actions | — | Pipeline automatisé |
+| Hébergement API | Render | — | Backend production |
+| Hébergement web | Vercel | — | Frontend production |
 
 ## Sécurité
 
-- Authentification JWT avec expiration 7 jours
-- Mots de passe hashés avec bcrypt 10 rounds
-- Headers de sécurité avec Helmet
-- CORS configuré pour le domaine frontend uniquement
-- Validation de toutes les entrées avec express-validator
-- Isolation des données par utilisateur
-- Variables sensibles dans fichier .env non versionné
+- **JWT** : tokens avec expiration configurable (7 jours par défaut)
+- **bcrypt** : 10 rounds de hash pour les mots de passe
+- **Helmet** : en-têtes de sécurité HTTP
+- **CORS** : origines autorisées limitées (localhost, Vercel, Capacitor)
+- **Validation** : toutes les entrées validées avec express-validator
+- **Isolation** : chaque utilisateur ne voit que ses données
+- **Variables sensibles** : .env jamais versionné
 
----
+## Évolutions possibles
 
-## Déploiement
-GitHub (code source)
-│
-│ push sur main
-▼
-GitHub Actions (CI/CD)
-│
-├── Installation dépendances
-├── Génération client Prisma
-├── Migration base de données
-├── Exécution 51 tests
-└── Build image Docker
-│
-│ si tout est vert
-▼
-Render (déploiement automatique)
-│
-├── Backend API : https://life-os-platform.onrender.com
-└── Base de données PostgreSQL : Render PostgreSQL
-
+- Synchronisation temps réel (WebSockets)
+- Notifications push (Firebase Cloud Messaging)
+- Mode hors-ligne (Service Worker + IndexedDB)
+- Thèmes personnalisables
+- Collaboration multi-utilisateur
+- Véritable IA (intégration OpenAI / Anthropic)
